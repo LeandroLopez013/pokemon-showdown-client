@@ -68,6 +68,7 @@ export class BattleFormat implements FormatData {
 	isNatDex: boolean;
 	isBDSP: boolean;
 	isChampions: boolean;
+	isSoulArmor: boolean;
 	allowMultipleMegas: boolean;
 	formeLegality: 'normal' | 'hackmons' | 'custom' = 'normal';
 	abilityLegality: 'normal' | 'hackmons' = 'normal';
@@ -82,6 +83,7 @@ export class BattleFormat implements FormatData {
 		this.isNatDex = id.includes('nationaldex') || id.includes('natdex');
 		this.isBDSP = id.includes('bdsp');
 		this.isChampions = id.includes('champions');
+		this.isSoulArmor = id.includes('soularmor');
 		this.allowMultipleMegas = id.includes('mega');
 		this.mod = `gen${this.gen}` as ID;
 		if (this.gen === 7 && this.isLetsGo) this.mod = 'gen7letsgo' as ID;

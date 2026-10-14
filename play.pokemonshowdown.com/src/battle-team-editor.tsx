@@ -494,6 +494,15 @@ export class TeamEditorState extends PSModel {
 		if (set.ivs) Object.assign(ivs, set.ivs);
 		return ivs;
 	}
+	soulSpriteStyle(set: Dex.PokemonSet) {
+		if (!this.format.isSoulArmor) return '';
+		const match = /^(.+)-(atk|def|spa|spd|spe)$/i.exec(set.name || '');
+		if (!match) return '';
+		const soul = this.dex.species.get(match[1]);
+		if (!soul.exists) return '';
+		return `${Dex.getTeambuilderSprite({ species: soul.name }, this.dex)};position:absolute;width:96px;height:96px;` +
+			`transform:scale(0.6);transform-origin:top left;opacity:0.8;pointer-events:none;`;
+	}
 	defaultIVs(set: Dex.PokemonSet, noGuess = !!set.ivs): Record<Dex.StatName, number> {
 		const useIVs = this.gen > 2;
 		const defaultIVs = { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
@@ -1771,7 +1780,7 @@ class TeamTextbox extends preact.Component<{
 			<span class="detailcell">
 				<label>{TL`Shiny`}</label>{set.shiny ? 'Yes' : '\u2014'}
 			</span>
-			{editor.gen === 9 && !editor.format.isChampions ? (
+			{editor.gen === 9 && (!editor.format.isChampions || editor.format.isSoulArmor) ? (
 				<span class="detailcell">
 					<label>{TL`Tera`}</label><PSIcon type={set.teraType || species.requiredTeraType || species.types[0]} />
 				</span>
@@ -1861,6 +1870,7 @@ class TeamTextbox extends preact.Component<{
 							</div>;
 						}
 						const spriteData = Dex.getTeambuilderSpriteData(set, editor.dex);
+						const soulStyle = editor.soulSpriteStyle(set);
 						return [<div
 							class={spriteData.pixelated ? 'pixelated' : ''}
 							style={
@@ -1870,7 +1880,7 @@ class TeamTextbox extends preact.Component<{
 							}
 						>
 							<div>{species.types.map(type => <PSIcon type={type} />)}<PSIcon item={set.item || null} /></div>
-						</div>, <div style={`top:${prevOffset + statsDetailsOffset}px;right:9px;position:absolute`}>
+						</div>, soulStyle && <div style={`${soulStyle}top:${prevOffset + 23}px;left:60px`}></div>,<div style={`top:${prevOffset + statsDetailsOffset}px;right:9px;position:absolute`}>
 							{this.renderStats(set, i)}
 						</div>, <div style={`top:${prevOffset + statsDetailsOffset}px;right:145px;position:absolute`}>
 							{this.renderDetails(set, i)}
@@ -2915,6 +2925,7 @@ class TeamEditorForm extends preact.Component<{
 		const tintClass = ` tint-${species.types[0]}`;
 		const isCur = TeamEditorState.clipboard?.teams?.[editor.team.key]?.sets[i] ? ' cur' : '';
 		const overfull = set.moves.length > 5 ? ' overfull' : set.moves.length > 4 ? ' overfull overfull5' : '';
+		const soulStyle = editor.soulSpriteStyle(set);
 		return <div class={`set-form${isCur}`} data-set-index={i}>
 			<div style="text-align:right">
 				<button class="option" onClick={this.copySet} value={i}>
@@ -2937,9 +2948,10 @@ class TeamEditorForm extends preact.Component<{
 					<i class="fa fa-trash" aria-hidden></i> {TL`[Delete]`}
 				</button>}
 			</div>
-			<table class={`${spriteClass}${tintClass}`} style={sprite}>
+			<table class={`${spriteClass}${tintClass}`} style={`${sprite};position:relative`}>
 				<tr>
 					<td rowSpan={2} class="set-pokemon"><div class="border-collapse">
+						{soulStyle && <div style={`${soulStyle}left:60px;top:30px`}></div>}
 						<span class="sprite-inner">
 							<label class="label">
 								<span>{TL`Pokémon`}</span> {}
@@ -2965,7 +2977,7 @@ class TeamEditorForm extends preact.Component<{
 										src={`${Dex.resourcePrefix}sprites/misc/shiny.png`} width={18} height={18} alt="Yes" style="margin-top: -2px"
 									/> : '\u2014'}
 								</span>}
-								{editor.gen === 9 && !editor.format.isChampions && <span class="detailcell">
+								{editor.gen === 9 && (!editor.format.isChampions || editor.format.isSoulArmor) && <span class="detailcell">
 									<label>{TL`Tera`}</label> {}
 									<PSIcon type={set.teraType || species.requiredTeraType || species.types[0]} new={!editor.narrow} tera />
 								</span>}
@@ -3855,7 +3867,7 @@ class DetailsForm extends preact.Component<{
 		const target = ev.currentTarget as HTMLInputElement;
 		const { editor, set } = this.props;
 		const species = editor.dex.species.get(set.species);
-		if (!target.value || target.value === (species.requiredTeraType || species.types[0])) {
+		if (!target.value || (!editor.format.isSoulArmor && target.value === (species.requiredTeraType || species.types[0]))) {
 			delete set.teraType;
 		} else {
 			set.teraType = target.value.trim();
@@ -4028,7 +4040,7 @@ class DetailsForm extends preact.Component<{
 						))}
 					</select></label>
 				</p>}
-				{editor.gen === 9 && !editor.format.isChampions && <p>
+				{editor.gen === 9 && (!editor.format.isChampions || editor.format.isSoulArmor) && <p>
 					<label class="label" title={TL`Tera Type`}>
 						{TL.label(TL`Tera Type`)}{}
 						{species.requiredTeraType && editor.format.formeLegality === 'normal' ? (
